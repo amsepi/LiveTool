@@ -78,49 +78,111 @@ export default function App() {
     : '';
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-100 to-purple-200 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 flex flex-col gap-6">
-        <h1 className="text-3xl font-bold text-center text-purple-700 mb-2">YouTube to MP3</h1>
-        <p className="text-center text-gray-500 mb-4">Paste a YouTube URL below to download the audio as MP3.</p>
-        <form onSubmit={handleDownload} className="flex flex-col gap-4">
-          <input
-            type="url"
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
-            placeholder="Enter YouTube URL..."
-            value={url}
-            onChange={e => setUrl(e.target.value)}
-            required
-          />
-          <button
-            type="submit"
-            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50"
-            disabled={loading}
-          >
-            {loading ? 'Downloading...' : 'Download MP3'}
-          </button>
-        </form>
-        {loading && (
-          <div className="flex flex-col gap-2 mt-2">
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                className="bg-purple-500 h-2.5 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-            <div className="text-xs text-gray-600 text-center">{statusText}</div>
-          </div>
-        )}
-        {error && (
-          <div className="bg-red-100 text-red-700 px-4 py-2 rounded-lg text-center mt-2">
-            {error}
-          </div>
-        )}
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
-      <footer className="mt-8 text-gray-400 text-sm text-center">
-        &copy; {new Date().getFullYear()} YouTube to MP3. All rights reserved.
+      
+      <div className="relative z-10 w-full max-w-lg">
+        <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 flex flex-col gap-8">
+          {/* Header */}
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-white mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              YouTube to MP3
+            </h1>
+            <p className="text-gray-300 text-lg leading-relaxed">
+              Transform any YouTube video into high-quality MP3 audio with just one click
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleDownload} className="flex flex-col gap-6">
+            <div className="relative">
+              <input
+                type="url"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                placeholder="Paste YouTube URL here..."
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                required
+              />
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            </div>
+            
+            <button
+              type="submit"
+              className="relative overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none shadow-lg hover:shadow-xl"
+              disabled={loading}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download MP3
+                  </>
+                )}
+              </span>
+            </button>
+          </form>
+
+          {/* Progress Section */}
+          {loading && (
+            <div className="space-y-4">
+              <div className="bg-white/5 rounded-2xl p-6 backdrop-blur-sm border border-white/10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-white font-medium">Progress</span>
+                  <span className="text-purple-300 font-bold">{Math.round(progress)}%</span>
+                </div>
+                <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+                <p className="text-gray-300 text-sm mt-3 text-center">{statusText}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/30 text-red-200 px-6 py-4 rounded-2xl text-center backdrop-blur-sm">
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {error}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="mt-12 text-gray-400 text-sm text-center relative z-10">
+        <p>&copy; {new Date().getFullYear()} YouTube to MP3. All rights reserved.</p>
       </footer>
-      <div className="fixed bottom-2 right-2 z-50 text-xs text-gray-400 opacity-80 bg-white/70 px-2 py-1 rounded shadow">
-        Made by Ahmed Hammad (<a href="https://github.com/amsepi" className="underline hover:text-purple-600">amsepi</a>)
+
+      {/* Credit */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <div className="bg-white/10 backdrop-blur-lg px-4 py-2 rounded-full border border-white/20 shadow-lg">
+          <span className="text-white text-sm">
+            Made by <a href="https://github.com/amsepi" className="text-purple-300 hover:text-purple-200 underline font-medium">Ahmed Hammad</a>
+          </span>
+        </div>
       </div>
     </div>
   );
