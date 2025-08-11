@@ -83,6 +83,25 @@ def download_audio(url: str = Query(..., description="YouTube video URL"), downl
         }],
         'progress_hooks': [progress_hook],
         'quiet': True,
+        # Anti-detection measures
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'cookiesfrombrowser': None,  # Will try to use browser cookies if available
+        'extractor_args': {
+            'youtube': {
+                'skip': ['dash', 'live'],
+                'player_client': ['android'],
+                'player_skip': ['webpage', 'configs'],
+            }
+        },
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+            'Sec-Fetch-Mode': 'navigate',
+        },
+        'nocheckcertificate': True,
+        'ignoreerrors': False,
+        'no_warnings': True,
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -93,8 +112,27 @@ def download_audio(url: str = Query(..., description="YouTube video URL"), downl
                 raise HTTPException(status_code=500, detail="MP3 file not found after download.")
             progress_store[download_id] = {"progress": 100, "status": "finished", "title": info.get('title', 'audio')}
     except Exception as e:
+        error_msg = str(e)
         progress_store[download_id] = {"progress": 100, "status": "error", "title": None}
-        raise HTTPException(status_code=400, detail=f"Download failed: {str(e)}")
+        
+        # Handle specific YouTube blocking errors
+        if "Sign in to confirm you're not a bot" in error_msg:
+            raise HTTPException(
+                status_code=403, 
+                detail="YouTube is blocking automated access. This is a temporary issue. Please try again later or use a different video."
+            )
+        elif "Video unavailable" in error_msg:
+            raise HTTPException(
+                status_code=404,
+                detail="This video is unavailable or private. Please check the URL and try again."
+            )
+        elif "This video is not available" in error_msg:
+            raise HTTPException(
+                status_code=404,
+                detail="This video is not available in your region or has been removed."
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"Download failed: {error_msg}")
     safe_title = info.get('title', 'audio').replace('"', '').replace("'", '').replace('/', '_').replace('\\', '_')
     filename = f"{safe_title}.mp3"
     headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
