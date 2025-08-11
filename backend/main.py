@@ -83,25 +83,39 @@ def download_audio(url: str = Query(..., description="YouTube video URL"), downl
         }],
         'progress_hooks': [progress_hook],
         'quiet': True,
-        # Anti-detection measures
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'cookiesfrombrowser': None,  # Will try to use browser cookies if available
+        # Enhanced anti-detection measures
+        'user_agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'cookiesfrombrowser': None,
         'extractor_args': {
             'youtube': {
                 'skip': ['dash', 'live'],
-                'player_client': ['android'],
+                'player_client': ['android', 'web'],
                 'player_skip': ['webpage', 'configs'],
+                'player_params': {'hl': 'en', 'gl': 'US'},
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-us,en;q=0.5',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
             'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
         },
         'nocheckcertificate': True,
         'ignoreerrors': False,
         'no_warnings': True,
+        'geo_bypass': True,
+        'geo_bypass_country': 'US',
+        'geo_bypass_ip_block': '1.0.0.1',
+        'socket_timeout': 30,
+        'retries': 3,
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -113,26 +127,60 @@ def download_audio(url: str = Query(..., description="YouTube video URL"), downl
             progress_store[download_id] = {"progress": 100, "status": "finished", "title": info.get('title', 'audio')}
     except Exception as e:
         error_msg = str(e)
-        progress_store[download_id] = {"progress": 100, "status": "error", "title": None}
         
-        # Handle specific YouTube blocking errors
-        if "Sign in to confirm you're not a bot" in error_msg:
-            raise HTTPException(
-                status_code=403, 
-                detail="YouTube is blocking automated access. This is a temporary issue. Please try again later or use a different video."
-            )
-        elif "Video unavailable" in error_msg:
-            raise HTTPException(
-                status_code=404,
-                detail="This video is unavailable or private. Please check the URL and try again."
-            )
-        elif "This video is not available" in error_msg:
-            raise HTTPException(
-                status_code=404,
-                detail="This video is not available in your region or has been removed."
-            )
+        # Try fallback configuration if bot detection fails
+        if "Sign in to confirm you're not a bot" in error_msg or "bot" in error_msg.lower():
+            progress_store[download_id] = {"progress": 50, "status": "retrying", "title": None}
+            
+            # Fallback configuration with different approach
+            fallback_opts = ydl_opts.copy()
+            fallback_opts.update({
+                'user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'extractor_args': {
+                    'youtube': {
+                        'skip': ['dash'],
+                        'player_client': ['web'],
+                        'player_skip': ['webpage'],
+                    }
+                },
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                },
+                'retries': 5,
+            })
+            
+            try:
+                with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    mp3_path = output_template.replace('%(ext)s', 'mp3')
+                    if not os.path.exists(mp3_path):
+                        progress_store[download_id] = {"progress": 100, "status": "error", "title": None}
+                        raise HTTPException(status_code=500, detail="MP3 file not found after download.")
+                    progress_store[download_id] = {"progress": 100, "status": "finished", "title": info.get('title', 'audio')}
+            except Exception as fallback_e:
+                progress_store[download_id] = {"progress": 100, "status": "error", "title": None}
+                raise HTTPException(
+                    status_code=403, 
+                    detail="YouTube is currently blocking automated access. Please try again later or use a different video."
+                )
         else:
-            raise HTTPException(status_code=400, detail=f"Download failed: {error_msg}")
+            progress_store[download_id] = {"progress": 100, "status": "error", "title": None}
+            
+            # Handle specific YouTube blocking errors
+            if "Video unavailable" in error_msg:
+                raise HTTPException(
+                    status_code=404,
+                    detail="This video is unavailable or private. Please check the URL and try again."
+                )
+            elif "This video is not available" in error_msg:
+                raise HTTPException(
+                    status_code=404,
+                    detail="This video is not available in your region or has been removed."
+                )
+            else:
+                raise HTTPException(status_code=400, detail=f"Download failed: {error_msg}")
     safe_title = info.get('title', 'audio').replace('"', '').replace("'", '').replace('/', '_').replace('\\', '_')
     filename = f"{safe_title}.mp3"
     headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
