@@ -12,13 +12,17 @@ function getFilenameFromHeader(header) {
 }
 
 export default function App() {
+  const [selectedFeature, setSelectedFeature] = useState('youtube'); // 'youtube' or 'remove-bg'
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [title, setTitle] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const eventSourceRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const handleDownload = async (e) => {
     e.preventDefault();
@@ -70,6 +74,52 @@ export default function App() {
     }
   };
 
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setError('');
+      // Create preview URL
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
+  };
+
+  const handleRemoveBackground = async (e) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      setError('Please select an image file.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      
+      const response = await axios.post('/remove-bg', formData, {
+        responseType: 'blob',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      const blob = new Blob([response.data], { type: 'image/png' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = getFilenameFromHeader(response.headers['content-disposition']);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to remove background.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const statusText = status === 'starting' ? 'Starting...'
     : status === 'downloading' ? `Downloading${title ? `: ${title}` : ''}`
     : status === 'converting' ? 'Converting to MP3...'
@@ -91,55 +141,151 @@ export default function App() {
           {/* Header */}
           <div className="text-center">
             <h1 className="text-4xl font-bold text-white mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              YouTube to MP3
+              Multi-Tool App
             </h1>
             <p className="text-gray-300 text-lg leading-relaxed">
-              Transform any YouTube video into high-quality MP3 audio with just one click
+              YouTube to MP3 & Background Removal
             </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleDownload} className="flex flex-col gap-6">
-            <div className="relative">
-              <input
-                type="url"
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
-                placeholder="Paste YouTube URL here..."
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                required
-              />
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-            </div>
-            
+          {/* Feature Selection Menu */}
+          <div className="flex gap-2 p-1 bg-white/10 rounded-2xl">
             <button
-              type="submit"
-              className="relative overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none shadow-lg hover:shadow-xl"
-              disabled={loading}
+              onClick={() => setSelectedFeature('youtube')}
+              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
+                selectedFeature === 'youtube'
+                  ? 'bg-purple-600 text-white shadow-lg'
+                  : 'text-gray-300 hover:text-white hover:bg-white/10'
+              }`}
             >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Downloading...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Download MP3
-                  </>
-                )}
-              </span>
+              🎵 YouTube to MP3
             </button>
-          </form>
+            <button
+              onClick={() => setSelectedFeature('remove-bg')}
+              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
+                selectedFeature === 'remove-bg'
+                  ? 'bg-purple-600 text-white shadow-lg'
+                  : 'text-gray-300 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              🖼️ Remove Background
+            </button>
+          </div>
+
+          {/* YouTube to MP3 Form */}
+          {selectedFeature === 'youtube' && (
+            <form onSubmit={handleDownload} className="flex flex-col gap-6">
+              <div className="relative">
+                <input
+                  type="url"
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                  placeholder="Paste YouTube URL here..."
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  required
+                />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              </div>
+              
+              <button
+                type="submit"
+                className="relative overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none shadow-lg hover:shadow-xl"
+                disabled={loading}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download MP3
+                    </>
+                  )}
+                </span>
+              </button>
+            </form>
+          )}
+
+          {/* Background Removal Form */}
+          {selectedFeature === 'remove-bg' && (
+            <form onSubmit={handleRemoveBackground} className="flex flex-col gap-6">
+              <div className="space-y-4">
+                <div className="relative">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full bg-white/10 border-2 border-dashed border-white/30 rounded-2xl px-6 py-8 text-white hover:bg-white/20 transition-all duration-300 backdrop-blur-sm"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span className="text-lg font-medium">
+                        {selectedFile ? selectedFile.name : 'Click to select image'}
+                      </span>
+                      <span className="text-sm text-gray-400">
+                        {selectedFile ? 'Click to change' : 'PNG, JPG, JPEG up to 10MB'}
+                      </span>
+                    </div>
+                  </button>
+                </div>
+
+                {previewUrl && (
+                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                    <p className="text-white text-sm mb-2">Preview:</p>
+                    <img 
+                      src={previewUrl} 
+                      alt="Preview" 
+                      className="w-full h-32 object-cover rounded-xl"
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <button
+                type="submit"
+                className="relative overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none shadow-lg hover:shadow-xl"
+                disabled={loading || !selectedFile}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Remove Background
+                    </>
+                  )}
+                </span>
+              </button>
+            </form>
+          )}
 
           {/* Progress Section */}
-          {loading && (
+          {loading && selectedFeature === 'youtube' && (
             <div className="space-y-4">
               <div className="bg-white/5 rounded-2xl p-6 backdrop-blur-sm border border-white/10">
                 <div className="flex items-center justify-between mb-3">
@@ -173,7 +319,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="mt-12 text-gray-400 text-sm text-center relative z-10">
-        <p>&copy; {new Date().getFullYear()} YouTube to MP3. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} Multi-Tool App. All rights reserved.</p>
       </footer>
 
       {/* Credit */}
