@@ -8,9 +8,13 @@ from fastapi.staticfiles import StaticFiles
 import threading
 import time
 from typing import Dict
+
 from rembg import remove
 from PIL import Image
 import io
+
+from backend.removebg_api import router as removebg_router
+
 
 app = FastAPI()
 
@@ -220,3 +224,5 @@ def download_audio(url: str = Query(..., description="YouTube video URL"), downl
     filename = f"{safe_title}.mp3"
     headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
     return FileResponse(mp3_path, media_type="audio/mpeg", filename=filename, headers=headers)
+
+app.include_router(removebg_router)
