@@ -14,6 +14,7 @@ function getFilenameFromHeader(header) {
 
 
 export default function App() {
+
   const [menu, setMenu] = useState('mp3');
   // MP3 state
   const [url, setUrl] = useState('');
@@ -22,12 +23,15 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [title, setTitle] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const eventSourceRef = useRef(null);
   // RemoveBG state
   const [image, setImage] = useState(null);
   const [bgLoading, setBgLoading] = useState(false);
   const [bgError, setBgError] = useState('');
   const [resultImg, setResultImg] = useState(null);
+
 
   // MP3 Download handler
   const handleDownload = async (e) => {
@@ -80,6 +84,7 @@ export default function App() {
     }
   };
 
+
   // RemoveBG handler
   const handleRemoveBg = async (e) => {
     e.preventDefault();
@@ -99,6 +104,7 @@ export default function App() {
       setBgError(err.response?.data?.detail || 'Failed to remove background.');
     } finally {
       setBgLoading(false);
+
     }
   };
 
@@ -119,6 +125,7 @@ export default function App() {
       </div>
       <div className="relative z-10 w-full max-w-lg">
         <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 flex flex-col gap-8">
+
           {/* Menu */}
           <div className="flex justify-center gap-4 mb-6">
             <button onClick={() => setMenu('mp3')} className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 ${menu==='mp3' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg' : 'bg-white/10 text-purple-200 hover:bg-white/20'}`}>YouTube to MP3</button>
@@ -197,6 +204,7 @@ export default function App() {
                     </svg>
                     {error}
                   </div>
+
                 </div>
               )}
             </>
@@ -273,7 +281,9 @@ export default function App() {
         </div>
       </div>
       <footer className="mt-12 text-gray-400 text-sm text-center relative z-10">
+
         <p>&copy; {new Date().getFullYear()} YouTube to MP3 & RemoveBG. All rights reserved.</p>
+
       </footer>
       <div className="fixed bottom-4 right-4 z-50">
         <div className="bg-white/10 backdrop-blur-lg px-4 py-2 rounded-full border border-white/20 shadow-lg">

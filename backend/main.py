@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Query, HTTPException, Request
-from fastapi.responses import FileResponse, StreamingResponse, Response
+from fastapi import FastAPI, Query, HTTPException, Request, UploadFile, File
+from fastapi.responses import FileResponse, StreamingResponse
 import yt_dlp
 import os
 import uuid
@@ -8,7 +8,13 @@ from fastapi.staticfiles import StaticFiles
 import threading
 import time
 from typing import Dict
+
+from rembg import remove
+from PIL import Image
+import io
+
 from backend.removebg_api import router as removebg_router
+
 
 app = FastAPI()
 
@@ -34,7 +40,39 @@ def read_root():
     index_file = os.path.join(frontend_path, 'index.html')
     if os.path.exists(index_file):
         return FileResponse(index_file)
-    return {"message": "YouTube to MP3 API is running."}
+    return {"message": "YouTube to MP3 & Background Removal API is running."}
+
+@app.post("/remove-bg")
+async def remove_background(file: UploadFile = File(...)):
+    """Remove background from uploaded image"""
+    try:
+        # Validate file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Read image
+        input_image = await file.read()
+        
+        # Remove background
+        output_image = remove(input_image)
+        
+        # Generate unique filename
+        filename = f"removed_bg_{uuid.uuid4().hex[:8]}.png"
+        
+        # Save to temp directory
+        output_path = os.path.join("/tmp", filename)
+        with open(output_path, "wb") as f:
+            f.write(output_image)
+        
+        return FileResponse(
+            output_path, 
+            media_type="image/png", 
+            filename=filename,
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Background removal failed: {str(e)}")
 
 @app.get("/progress")
 def progress_stream(download_id: str):
