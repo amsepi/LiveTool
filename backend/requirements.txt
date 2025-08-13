@@ -1,3 +1,10 @@
+onnxruntime
+python-multipart
+onnxruntime
+python-multipart
+onnxruntime
+rembg
+Pillow
 fastapi
 uvicorn
 yt-dlp
