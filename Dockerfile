@@ -9,18 +9,29 @@ RUN npm run build
 # Stage 2: Backend + static serving
 FROM python:3.11-slim AS backend
 WORKDIR /app
+
 # Install ffmpeg for yt-dlp audio extraction
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ffmpeg wget && rm -rf /var/lib/apt/lists/*
+
 # Install backend dependencies
 COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
+
+# Download u2net weights during build (so it’s cached in the image)
+RUN mkdir -p /root/.u2net && \
+    wget -O /root/.u2net/u2net.onnx https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx
+
 # Copy backend code
 COPY backend/ ./backend/
+
 # Copy frontend build to backend static directory
 COPY --from=frontend-build /app/frontend/dist ./backend/static
+
 # Expose port
 EXPOSE 8000
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+
 # Run FastAPI app with Uvicorn, serve static files from /backend/static
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

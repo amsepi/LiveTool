@@ -56,8 +56,9 @@ async def remove_background(file: UploadFile = File(...)):
         # Remove background
         output_image = remove(input_image)
         
-        # Generate unique filename
-        filename = f"removed_bg_{uuid.uuid4().hex[:8]}.png"
+        # Generate filename based on original filename
+        base, ext = os.path.splitext(file.filename)
+        filename = f"{base}-rembg.png"
         
         # Save to temp directory
         output_path = os.path.join("/tmp", filename)
