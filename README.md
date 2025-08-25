@@ -1,4 +1,4 @@
-# Multi-Tool Web App
+# LiveTool -> A Multi-Tool Web App
 
 A modern, fullstack web app with two powerful features: YouTube to MP3 conversion and AI-powered background removal. Built with FastAPI (Python), React (Vite), Tailwind CSS, and Docker. Features real-time progress tracking and beautiful, responsive UI.
 
