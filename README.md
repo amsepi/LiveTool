@@ -80,6 +80,62 @@ Dockerfile  # Multi-stage build for fullstack deployment
 
 ---
 
+## AWS Deployment with Terraform
+
+This project includes a Terraform configuration to automatically deploy the application to AWS.
+
+### What is Terraform?
+
+Terraform is an **Infrastructure as Code (IaC)** tool. Instead of manually clicking through the AWS console to create servers, networks, and security groups, you define all those resources in configuration files. This makes your infrastructure repeatable, version-controlled, and easy to manage.
+
+### How to Deploy
+
+Anyone who clones this repository can easily replicate the deployment by following these steps:
+
+#### 1. Prerequisites
+
+Before you begin, you need:
+
+*   An AWS Account.
+*   Terraform CLI installed on your local machine.
+*   AWS CLI installed and configured (`aws configure`) with credentials for an IAM User.
+*   An EC2 Key Pair created in your target AWS region. This is for SSH access.
+*   The correct IAM Permissions for your user. The `AdministratorAccess` policy works but is not recommended for production. A custom policy is safer.
+
+#### 2. Customize Variables
+
+Inside the `livetool-deployment` directory, open `variables.tf`. If your AWS region or EC2 Key Pair name are different, you can change the `default` values in this file.
+
+#### 3. Run Terraform
+
+Navigate to the deployment directory and run the standard Terraform commands:
+
+```sh
+cd livetool-deployment
+
+# Initializes Terraform and downloads the AWS provider
+terraform init
+
+# Provisions all the resources defined in the .tf files
+terraform apply
+```
+
+After confirming with `yes`, Terraform will build the infrastructure. When it's done, it will output the public IP address of the server.
+
+#### 4. Access the Application
+
+Wait 5-10 minutes for the setup script to finish, then open your browser to `http://<public_ip>:8000`.
+
+#### 5. Clean Up
+
+To avoid ongoing AWS charges, you can destroy all the created infrastructure with a single command:
+
+```sh
+terraform destroy
+```
+
+---
+
 ## API Endpoints
 
 - `GET /` - Serve the frontend application
